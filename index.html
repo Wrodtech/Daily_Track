@@ -1,0 +1,2977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="description" content="Personal Life Manager - Track tasks, expenses, habits, and journal entries">
+    <title>DailyTrack</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ============= CSS VARIABLES ============= */
+        :root {
+            /* Primary Colors */
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #818cf8;
+            
+            /* Secondary Colors */
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            
+            /* Status Colors */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            /* Neutral Colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --border: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            
+            /* Spacing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            
+            /* Border Radius */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-full: 9999px;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 250ms ease;
+            --transition-slow: 350ms ease;
+            
+            /* Z-index */
+            --z-dropdown: 10;
+            --z-sticky: 20;
+            --z-modal: 30;
+            --z-toast: 40;
+        }
+
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #111827;
+                --bg-secondary: #1f2937;
+                --bg-tertiary: #374151;
+                --border: #4b5563;
+                --text-primary: #f9fafb;
+                --text-secondary: #d1d5db;
+                --text-tertiary: #9ca3af;
+            }
+        }
+
+        /* ============= RESET & BASE STYLES ============= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            font-size: 16px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            overflow-x: hidden;
+        }
+
+        /* Safe area insets for modern phones */
+        @supports (padding: max(0px)) {
+            body, .app-header, .bottom-nav {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+            }
+            .bottom-nav {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+
+        /* ============= APP LAYOUT ============= */
+        .app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 480px;
+            margin: 0 auto;
+            position: relative;
+            background: var(--bg-primary);
+        }
+
+        /* ============= HEADER ============= */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: var(--z-sticky);
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-md);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            border: none;
+        }
+
+        .icon-btn:hover,
+        .icon-btn:active {
+            background: var(--bg-tertiary);
+            transform: translateY(-1px);
+        }
+
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ============= BOTTOM NAVIGATION ============= */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            padding: var(--spacing-sm) var(--spacing-md);
+            padding-bottom: max(var(--spacing-md), env(safe-area-inset-bottom));
+            z-index: var(--z-sticky);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: var(--spacing-xs);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.75rem;
+            transition: all var(--transition-base);
+            position: relative;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: var(--bg-secondary);
+        }
+
+        .nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .nav-icon {
+            font-size: 1.25rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--error);
+            color: white;
+            font-size: 0.625rem;
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============= MAIN CONTENT ============= */
+        .main-content {
+            flex: 1;
+            padding: var(--spacing-md);
+            padding-bottom: calc(var(--spacing-md) * 2 + 60px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ============= VIEWS ============= */
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ============= CARDS ============= */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            transition: all var(--transition-base);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* ============= STATS GRID ============= */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============= LISTS ============= */
+        .list {
+            list-style: none;
+        }
+
+        .list-item {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all var(--transition-base);
+        }
+
+        .list-item:active {
+            background: var(--bg-tertiary);
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-title {
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-primary);
+        }
+
+        .item-meta {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* ============= BADGES ============= */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            border: none;
+            cursor: pointer;
+        }
+
+        .badge-primary { background: var(--primary); color: white; }
+        .badge-secondary { background: var(--secondary); color: white; }
+        .badge-success { background: var(--success); color: white; }
+        .badge-warning { background: var(--warning); color: var(--text-primary); }
+        .badge-error { background: var(--error); color: white; }
+
+        /* ============= FORMS ============= */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all var(--transition-base);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* ============= BUTTONS ============= */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition-base);
+            font-size: 1rem;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover,
+        .btn-secondary:focus {
+            background: var(--border);
+        }
+
+        /* ============= FAB ============= */
+        .fab {
+            position: fixed;
+            bottom: calc(80px + var(--spacing-md));
+            right: var(--spacing-md);
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-full);
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            z-index: var(--z-sticky);
+            transition: all var(--transition-base);
+            border: none;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ============= MODALS ============= */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: var(--z-modal);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-base);
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            width: 100%;
+            max-width: 480px;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            padding: var(--spacing-lg);
+            padding-bottom: max(var(--spacing-xl), env(safe-area-inset-bottom));
+            transform: translateY(100%);
+            transition: transform var(--transition-base);
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-full);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* ============= TOAST ============= */
+        .toast-container {
+            position: fixed;
+            top: var(--spacing-md);
+            right: var(--spacing-md);
+            left: var(--spacing-md);
+            z-index: var(--z-toast);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            transform: translateY(-100%);
+            opacity: 0;
+            transition: all var(--transition-base);
+            pointer-events: all;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-icon {
+            font-size: 1.25rem;
+        }
+
+        .toast-success .toast-icon { color: var(--success); }
+        .toast-error .toast-icon { color: var(--error); }
+        .toast-info .toast-icon { color: var(--info); }
+
+        /* ============= EMPTY STATES ============= */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.5;
+        }
+
+        /* ============= PROGRESS BARS ============= */
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            margin: var(--spacing-sm) 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: var(--radius-full);
+            transition: width var(--transition-slow);
+        }
+
+        /* ============= INSTALL PROMPT ============= */
+        .install-prompt {
+            position: fixed;
+            bottom: calc(80px + var(--spacing-md));
+            left: var(--spacing-md);
+            right: var(--spacing-md);
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-lg);
+            display: none;
+            align-items: center;
+            gap: var(--spacing-md);
+            z-index: var(--z-sticky);
+            transform: translateY(100%);
+            transition: transform var(--transition-base);
+        }
+
+        .install-prompt.show {
+            transform: translateY(0);
+            display: flex;
+        }
+
+        /* ============= SWIPE ACTIONS ============= */
+        .swipe-item {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .swipe-actions {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            transition: transform var(--transition-base);
+        }
+
+        .swipe-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        .swipe-action.edit {
+            background: var(--info);
+        }
+
+        .swipe-action.delete {
+            background: var(--error);
+        }
+
+        /* ============= DATE FILTERS ============= */
+        .date-filter {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .date-filter-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all var(--transition-base);
+        }
+
+        .date-filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* ============= RESPONSIVE ============= */
+        @media (min-width: 768px) {
+            .app {
+                max-width: 768px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app" id="app">
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <!-- Offline Indicator -->
+        <div class="offline-indicator" id="offlineIndicator" style="position: fixed; top: 0; left: 0; right: 0; background: var(--error); color: white; text-align: center; padding: var(--spacing-sm); display: none; z-index: var(--z-toast);">
+            <i class="fas fa-wifi-slash"></i> You're offline. Changes will sync when you reconnect.
+        </div>
+
+        <!-- PWA Install Prompt -->
+        <div class="install-prompt" id="installPrompt">
+            <i class="fas fa-mobile-alt" style="font-size: 1.5rem; color: var(--primary);"></i>
+            <div style="flex: 1;">
+                <div style="font-weight: 600;">Install DailyTrack</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">Add to home screen for quick access</div>
+            </div>
+            <button class="btn btn-primary" id="installButton" style="padding: var(--spacing-sm) var(--spacing-md);">
+                Install
+            </button>
+            <button class="icon-btn" id="dismissInstall">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="header-title">DailyTrack</h1>
+                <div class="header-actions">
+                    <button class="icon-btn" id="syncButton" title="Sync">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button class="icon-btn" id="settingsButton" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Dashboard View -->
+            <div class="view active" id="dashboardView">
+                <!-- Welcome Card -->
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h2 class="card-title" id="greeting">
+                            <i class="fas fa-sun"></i> Good Morning!
+                        </h2>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary);" id="currentDate">
+                            Loading...
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="todayTasks">0</div>
+                            <div class="stat-label">Today's Tasks</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="taskProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="todayExpenses">$0</div>
+                            <div class="stat-label">Today's Spend</div>
+                            <div style="font-size: 0.75rem;" id="budgetStatus">Under Budget</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="currentStreak">0</div>
+                            <div class="stat-label">Day Streak</div>
+                            <div style="font-size: 0.75rem;">Keep going!</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="waterIntake">0/8</div>
+                            <div class="stat-label">Water Glasses</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="waterProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-history"></i> Recent Activity
+                        </h2>
+                    </div>
+                    <ul class="list" id="recentActivity">
+                        <div class="empty-state" id="noActivity">
+                            <i class="fas fa-clock empty-state-icon"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tasks View -->
+            <div class="view" id="tasksView">
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-tasks"></i> Tasks
+                        </h2>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="icon-btn" id="filterTasks">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="date-filter" id="taskFilters" style="display: none;">
+                        <button class="date-filter-btn active" data-filter="all">All</button>
+                        <button class="date-filter-btn" data-filter="today">Today</button>
+                        <button class="date-filter-btn" data-filter="pending">Pending</button>
+                        <button class="date-filter-btn" data-filter="completed">Completed</button>
+                        <button class="date-filter-btn" data-filter="overdue">Overdue</button>
+                    </div>
+                </div>
+
+                <ul class="list" id="tasksList">
+                    <div class="empty-state" id="noTasks">
+                        <i class="fas fa-tasks empty-state-icon"></i>
+                        <p>No tasks yet</p>
+                        <button class="btn btn-secondary" style="margin-top: var(--spacing-md);" id="addFirstTask">
+                            <i class="fas fa-plus"></i> Add Your First Task
+                        </button>
+                    </div>
+                </ul>
+            </div>
+
+            <!-- Expenses View -->
+            <div class="view" id="expensesView">
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-receipt"></i> Expenses
+                        </h2>
+                        <div style="font-size: 1.125rem; font-weight: 600;" id="periodTotal">$0</div>
+                    </div>
+                    
+                    <!-- Date Range Filter -->
+                    <div class="date-filter">
+                        <button class="date-filter-btn active" data-period="today">Today</button>
+                        <button class="date-filter-btn" data-period="week">This Week</button>
+                        <button class="date-filter-btn" data-period="month">This Month</button>
+                        <button class="date-filter-btn" data-period="year">This Year</button>
+                        <button class="date-filter-btn" data-period="all">All Time</button>
+                    </div>
+                    
+                    <!-- Custom Date Range -->
+                    <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <input type="date" id="dateFrom" class="form-control" style="flex: 1;">
+                        <input type="date" id="dateTo" class="form-control" style="flex: 1;">
+                        <button class="btn btn-primary" id="applyDateFilter" style="width: auto; padding: var(--spacing-sm) var(--spacing-md);">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Category Filter -->
+                    <div style="margin-top: var(--spacing-md);">
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">Filter by Category:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: var(--spacing-sm);" id="categoryFilters">
+                            <!-- Categories will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expense Summary -->
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h3 style="font-weight: 500;">Summary</h3>
+                    </div>
+                    <div id="expenseSummary">
+                        <!-- Summary will be populated here -->
+                    </div>
+                </div>
+
+                <ul class="list" id="expensesList">
+                    <!-- Expense items will be added here -->
+                </ul>
+                <div class="empty-state" id="noExpenses">
+                    <i class="fas fa-receipt empty-state-icon"></i>
+                    <p>No expenses recorded</p>
+                    <button class="btn btn-secondary" style="margin-top: var(--spacing-md);" id="addFirstExpense">
+                        <i class="fas fa-plus"></i> Add Your First Expense
+                    </button>
+                </div>
+            </div>
+
+            <!-- Habits View -->
+            <div class="view" id="habitsView">
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-line"></i> Habits
+                        </h2>
+                        <div style="font-size: 1.125rem; font-weight: 600;" id="streakCount">0 day streak</div>
+                    </div>
+                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                        Track your daily habits and build consistency
+                    </div>
+                </div>
+
+                <ul class="list" id="habitsList">
+                    <!-- Habit items will be added here -->
+                </ul>
+                <div class="empty-state" id="noHabits">
+                    <i class="fas fa-chart-line empty-state-icon"></i>
+                    <p>No habits yet</p>
+                    <button class="btn btn-secondary" style="margin-top: var(--spacing-md);" id="addFirstHabit">
+                        <i class="fas fa-plus"></i> Add Your First Habit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Journal View -->
+            <div class="view" id="journalView">
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-book"></i> Journal
+                        </h2>
+                        <button class="badge badge-primary" id="todayEntry">
+                            Today's Entry
+                        </button>
+                    </div>
+                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: var(--spacing-md);">
+                        Reflect on your day and track your mood
+                    </div>
+                </div>
+
+                <!-- Journal Entry Form -->
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="form-group">
+                        <label class="form-label">How was your day?</label>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-md);">
+                            <button class="mood-btn" data-mood="1" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: var(--spacing-sm);">😢</button>
+                            <button class="mood-btn" data-mood="2" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: var(--spacing-sm);">😞</button>
+                            <button class="mood-btn active" data-mood="3" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: var(--spacing-sm);">😐</button>
+                            <button class="mood-btn" data-mood="4" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: var(--spacing-sm);">😊</button>
+                            <button class="mood-btn" data-mood="5" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; padding: var(--spacing-sm);">😄</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Today's Notes</label>
+                        <textarea 
+                            class="form-control" 
+                            id="journalEntry" 
+                            rows="4" 
+                            placeholder="Write about your day..."
+                        ></textarea>
+                    </div>
+                    <button class="btn btn-primary" id="saveJournal">
+                        <i class="fas fa-save"></i> Save Entry
+                    </button>
+                </div>
+
+                <!-- Date Filter for Journal -->
+                <div class="card" style="margin-bottom: var(--spacing-md);">
+                    <div class="form-group">
+                        <label class="form-label">View Entries From</label>
+                        <input type="month" id="journalMonth" class="form-control">
+                    </div>
+                </div>
+
+                <ul class="list" id="journalList">
+                    <!-- Journal entries will be added here -->
+                </ul>
+                <div class="empty-state" id="noJournal">
+                    <i class="fas fa-book empty-state-icon"></i>
+                    <p>No journal entries yet</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Action Button -->
+        <button class="fab" id="fabButton">
+            <i class="fas fa-plus"></i>
+        </button>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="dashboard">
+                <i class="fas fa-home nav-icon"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-item" data-view="tasks">
+                <i class="fas fa-tasks nav-icon"></i>
+                <span>Tasks</span>
+                <span class="nav-badge" id="taskBadge" style="display: none;">0</span>
+            </button>
+            <button class="nav-item" data-view="expenses">
+                <i class="fas fa-receipt nav-icon"></i>
+                <span>Expenses</span>
+            </button>
+            <button class="nav-item" data-view="habits">
+                <i class="fas fa-chart-line nav-icon"></i>
+                <span>Habits</span>
+            </button>
+            <button class="nav-item" data-view="journal">
+                <i class="fas fa-book nav-icon"></i>
+                <span>Journal</span>
+            </button>
+        </nav>
+
+        <!-- Task Modal -->
+        <div class="modal" id="taskModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="taskModalTitle">New Task</h3>
+                    <button class="modal-close" id="closeTaskModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-control" id="taskTitle" placeholder="What needs to be done?" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Priority</label>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button type="button" class="badge priority-btn" data-priority="low">Low</button>
+                            <button type="button" class="badge badge-warning priority-btn active" data-priority="medium">Medium</button>
+                            <button type="button" class="badge badge-error priority-btn" data-priority="high">High</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="taskDueDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" id="taskCategory">
+                            <option value="personal">Personal</option>
+                            <option value="work">Work</option>
+                            <option value="health">Health</option>
+                            <option value="home">Home</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="taskNotes" rows="3" placeholder="Additional details..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">
+                            <i class="fas fa-save"></i> Save Task
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="deleteTaskBtn" style="display: none;">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Expense Modal -->
+        <div class="modal" id="expenseModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="expenseModalTitle">New Expense</h3>
+                    <button class="modal-close" id="closeExpenseModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="expenseForm">
+                    <input type="hidden" id="expenseId">
+                    <div class="form-group">
+                        <label class="form-label">Amount ($)</label>
+                        <input type="number" class="form-control" id="expenseAmount" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" id="expenseDescription" placeholder="What was this for?" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-control" id="expenseCategory">
+                            <option value="food">Food & Dining</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="bills">Bills & Utilities</option>
+                            <option value="health">Healthcare</option>
+                            <option value="education">Education</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" id="expenseDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Method (Optional)</label>
+                        <select class="form-control" id="expensePayment">
+                            <option value="">Select method</option>
+                            <option value="cash">Cash</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="digital">Digital Wallet</option>
+                            <option value="bank">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm);">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">
+                            <i class="fas fa-save"></i> Save Expense
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="deleteExpenseBtn" style="display: none;">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Settings</h3>
+                    <button class="modal-close" id="closeSettingsModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Daily Budget ($)</label>
+                    <input type="number" class="form-control" id="dailyBudget" value="50" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Water Goal (glasses)</label>
+                    <input type="number" class="form-control" id="waterGoal" value="8" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <input type="checkbox" id="enableNotifications" checked>
+                        Enable Notifications
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Default Currency</label>
+                    <select class="form-control" id="defaultCurrency">
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="JPY">JPY (¥)</option>
+                        <option value="INR">INR (₹)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Theme</label>
+                    <select class="form-control" id="themeSelect">
+                        <option value="auto">Auto (System)</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn btn-secondary" id="exportData">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                    <button class="btn btn-secondary" id="importData">
+                        <i class="fas fa-upload"></i> Import Data
+                    </button>
+                    <button class="btn btn-primary" id="saveSettings">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+                <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-md); border-top: 1px solid var(--border);">
+                    <button class="btn" style="background: var(--bg-tertiary); color: var(--text-secondary); width: 100%;" id="clearAllData">
+                        <i class="fas fa-trash"></i> Clear All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal" id="confirmModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="confirmModalTitle">Confirm</h3>
+                    <button class="modal-close" id="closeConfirmModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="margin-bottom: var(--spacing-lg);" id="confirmMessage">
+                    Are you sure?
+                </div>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn btn-secondary" id="confirmCancel" style="flex: 1;">
+                        Cancel
+                    </button>
+                    <button class="btn btn-error" id="confirmAction" style="flex: 1; background: var(--error);">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==============================================
+        // APPLICATION STATE & DATA STORAGE
+        // ==============================================
+        class AppData {
+            constructor() {
+                this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+                this.habits = JSON.parse(localStorage.getItem('habits')) || [];
+                this.habitLogs = JSON.parse(localStorage.getItem('habitLogs')) || {};
+                this.journalEntries = JSON.parse(localStorage.getItem('journalEntries')) || [];
+                this.settings = JSON.parse(localStorage.getItem('settings')) || this.getDefaultSettings();
+                this.activityLog = JSON.parse(localStorage.getItem('activityLog')) || [];
+                this.waterIntake = JSON.parse(localStorage.getItem('waterIntake')) || this.getDefaultWaterIntake();
+                
+                this.deferredPrompt = null;
+                this.currentView = 'dashboard';
+                this.editingItem = null;
+                this.editingType = null;
+                
+                // Expense filter state
+                this.expenseFilter = {
+                    period: 'today',
+                    dateFrom: null,
+                    dateTo: null,
+                    category: null
+                };
+                
+                // Task filter state
+                this.taskFilter = 'all';
+                
+                // Journal filter state
+                this.journalFilter = null;
+            }
+            
+            getDefaultSettings() {
+                return {
+                    dailyBudget: 50,
+                    waterGoal: 8,
+                    enableNotifications: true,
+                    defaultCurrency: 'USD',
+                    theme: 'auto',
+                    dateFormat: 'YYYY-MM-DD',
+                    currencySymbol: '$'
+                };
+            }
+            
+            getDefaultWaterIntake() {
+                const today = new Date().toISOString().split('T')[0];
+                return {
+                    date: today,
+                    glasses: 0,
+                    goal: 8
+                };
+            }
+            
+            save() {
+                localStorage.setItem('tasks', JSON.stringify(this.tasks));
+                localStorage.setItem('expenses', JSON.stringify(this.expenses));
+                localStorage.setItem('habits', JSON.stringify(this.habits));
+                localStorage.setItem('habitLogs', JSON.stringify(this.habitLogs));
+                localStorage.setItem('journalEntries', JSON.stringify(this.journalEntries));
+                localStorage.setItem('settings', JSON.stringify(this.settings));
+                localStorage.setItem('activityLog', JSON.stringify(this.activityLog));
+                localStorage.setItem('waterIntake', JSON.stringify(this.waterIntake));
+            }
+            
+            logActivity(action, details = '', type = 'info') {
+                const activity = {
+                    id: Date.now().toString(),
+                    action,
+                    details,
+                    type,
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.activityLog.unshift(activity);
+                // Keep only last 100 activities
+                if (this.activityLog.length > 100) {
+                    this.activityLog.pop();
+                }
+                
+                this.save();
+                return activity;
+            }
+            
+            clearAllData() {
+                this.tasks = [];
+                this.expenses = [];
+                this.habits = [];
+                this.habitLogs = {};
+                this.journalEntries = [];
+                this.activityLog = [];
+                this.waterIntake = this.getDefaultWaterIntake();
+                this.save();
+            }
+            
+            getFilteredExpenses() {
+                let filtered = [...this.expenses];
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+                
+                switch(this.expenseFilter.period) {
+                    case 'today':
+                        filtered = filtered.filter(expense => expense.date === todayStr);
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(today);
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        filtered = filtered.filter(expense => {
+                            const expenseDate = new Date(expense.date);
+                            return expenseDate >= weekAgo && expenseDate <= today;
+                        });
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(today);
+                        monthAgo.setMonth(monthAgo.getMonth() - 1);
+                        filtered = filtered.filter(expense => {
+                            const expenseDate = new Date(expense.date);
+                            return expenseDate >= monthAgo && expenseDate <= today;
+                        });
+                        break;
+                    case 'year':
+                        const yearAgo = new Date(today);
+                        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+                        filtered = filtered.filter(expense => {
+                            const expenseDate = new Date(expense.date);
+                            return expenseDate >= yearAgo && expenseDate <= today;
+                        });
+                        break;
+                    case 'custom':
+                        if (this.expenseFilter.dateFrom && this.expenseFilter.dateTo) {
+                            filtered = filtered.filter(expense => {
+                                return expense.date >= this.expenseFilter.dateFrom && 
+                                       expense.date <= this.expenseFilter.dateTo;
+                            });
+                        }
+                        break;
+                    // 'all' case returns all expenses
+                }
+                
+                // Apply category filter
+                if (this.expenseFilter.category) {
+                    filtered = filtered.filter(expense => expense.category === this.expenseFilter.category);
+                }
+                
+                // Sort by date descending (most recent first)
+                return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
+            
+            getExpenseSummary() {
+                const filtered = this.getFilteredExpenses();
+                const summary = {
+                    total: 0,
+                    count: filtered.length,
+                    byCategory: {},
+                    average: 0
+                };
+                
+                filtered.forEach(expense => {
+                    summary.total += expense.amount;
+                    if (!summary.byCategory[expense.category]) {
+                        summary.byCategory[expense.category] = 0;
+                    }
+                    summary.byCategory[expense.category] += expense.amount;
+                });
+                
+                if (summary.count > 0) {
+                    summary.average = summary.total / summary.count;
+                }
+                
+                return summary;
+            }
+        }
+
+        // ==============================================
+        // UI MANAGER
+        // ==============================================
+        class UIManager {
+            constructor(app) {
+                this.app = app;
+                this.currentView = 'dashboard';
+                this.swipeStartX = null;
+                this.swipeStartY = null;
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.updateDateTime();
+                this.updateGreeting();
+                this.setupInstallPrompt();
+                this.setupOfflineDetection();
+                this.applyTheme(this.app.data.settings.theme);
+                
+                // Update date/time every minute
+                setInterval(() => this.updateDateTime(), 60000);
+                
+                // Initialize form dates
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('taskDueDate').value = today;
+                document.getElementById('expenseDate').value = today;
+                document.getElementById('dateFrom').value = today;
+                document.getElementById('dateTo').value = today;
+                document.getElementById('journalMonth').value = today.substr(0, 7);
+                
+                // Initialize category filters
+                this.setupCategoryFilters();
+            }
+            
+            setupEventListeners() {
+                // Bottom Navigation
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const view = item.dataset.view;
+                        this.switchView(view);
+                    });
+                });
+                
+                // Header Buttons
+                document.getElementById('syncButton').addEventListener('click', () => {
+                    this.syncData();
+                });
+                
+                document.getElementById('settingsButton').addEventListener('click', () => {
+                    this.showSettingsModal();
+                });
+                
+                // FAB Button
+                document.getElementById('fabButton').addEventListener('click', () => {
+                    this.handleFabClick();
+                });
+                
+                // First Item Buttons
+                document.getElementById('addFirstTask')?.addEventListener('click', () => {
+                    this.showTaskModal();
+                });
+                
+                document.getElementById('addFirstExpense')?.addEventListener('click', () => {
+                    this.showExpenseModal();
+                });
+                
+                document.getElementById('addFirstHabit')?.addEventListener('click', () => {
+                    this.showToast('Habit feature coming soon!', 'info');
+                });
+                
+                // Task Form
+                document.getElementById('taskForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleTaskSubmit();
+                });
+                
+                // Expense Form
+                document.getElementById('expenseForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleExpenseSubmit();
+                });
+                
+                // Journal Form
+                document.getElementById('saveJournal').addEventListener('click', () => {
+                    this.handleJournalSubmit();
+                });
+                
+                // Priority Buttons
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.priority-btn').forEach(b => {
+                            b.classList.remove('active');
+                            b.classList.remove('badge-primary');
+                        });
+                        btn.classList.add('active');
+                        btn.classList.add('badge-primary');
+                    });
+                });
+                
+                // Mood Buttons
+                document.querySelectorAll('.mood-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                });
+                
+                // Modal Close Buttons
+                document.querySelectorAll('.modal-close').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.hideAllModals();
+                    });
+                });
+                
+                // Close modal on backdrop click
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            this.hideAllModals();
+                        }
+                    });
+                });
+                
+                // Task Filters
+                document.getElementById('filterTasks').addEventListener('click', () => {
+                    const filters = document.getElementById('taskFilters');
+                    filters.style.display = filters.style.display === 'none' ? 'flex' : 'none';
+                });
+                
+                document.querySelectorAll('#taskFilters .date-filter-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const filter = btn.dataset.filter;
+                        this.app.data.taskFilter = filter;
+                        document.querySelectorAll('#taskFilters .date-filter-btn').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        this.renderTasks();
+                    });
+                });
+                
+                // Expense Period Filters
+                document.querySelectorAll('.date-filter-btn[data-period]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const period = btn.dataset.period;
+                        this.app.data.expenseFilter.period = period;
+                        this.app.data.expenseFilter.dateFrom = null;
+                        this.app.data.expenseFilter.dateTo = null;
+                        
+                        document.querySelectorAll('.date-filter-btn[data-period]').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        
+                        // If custom period, show date inputs
+                        if (period === 'custom') {
+                            document.getElementById('dateFrom').style.display = 'block';
+                            document.getElementById('dateTo').style.display = 'block';
+                            document.getElementById('applyDateFilter').style.display = 'block';
+                        } else {
+                            document.getElementById('dateFrom').style.display = 'none';
+                            document.getElementById('dateTo').style.display = 'none';
+                            document.getElementById('applyDateFilter').style.display = 'none';
+                        }
+                        
+                        this.renderExpenses();
+                    });
+                });
+                
+                // Apply Date Filter
+                document.getElementById('applyDateFilter').addEventListener('click', () => {
+                    const dateFrom = document.getElementById('dateFrom').value;
+                    const dateTo = document.getElementById('dateTo').value;
+                    
+                    if (!dateFrom || !dateTo) {
+                        this.showToast('Please select both dates', 'error');
+                        return;
+                    }
+                    
+                    if (dateFrom > dateTo) {
+                        this.showToast('Start date must be before end date', 'error');
+                        return;
+                    }
+                    
+                    this.app.data.expenseFilter.period = 'custom';
+                    this.app.data.expenseFilter.dateFrom = dateFrom;
+                    this.app.data.expenseFilter.dateTo = dateTo;
+                    this.renderExpenses();
+                });
+                
+                // Journal Month Filter
+                document.getElementById('journalMonth').addEventListener('change', () => {
+                    this.app.data.journalFilter = document.getElementById('journalMonth').value;
+                    this.renderJournalEntries();
+                });
+                
+                // Today's Journal Entry
+                document.getElementById('todayEntry').addEventListener('click', () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const entry = this.app.data.journalEntries.find(e => e.date === today);
+                    
+                    if (entry) {
+                        document.getElementById('journalEntry').value = entry.content;
+                        document.querySelectorAll('.mood-btn').forEach(btn => {
+                            btn.classList.toggle('active', parseInt(btn.dataset.mood) === entry.mood);
+                        });
+                    } else {
+                        document.getElementById('journalEntry').value = '';
+                        document.querySelectorAll('.mood-btn').forEach((btn, index) => {
+                            btn.classList.toggle('active', index === 2);
+                        });
+                    }
+                });
+                
+                // Delete Task Button
+                document.getElementById('deleteTaskBtn').addEventListener('click', () => {
+                    this.showConfirmModal('Delete Task', 'Are you sure you want to delete this task?', () => {
+                        this.deleteTask(this.app.data.editingItem.id);
+                    });
+                });
+                
+                // Delete Expense Button
+                document.getElementById('deleteExpenseBtn').addEventListener('click', () => {
+                    this.showConfirmModal('Delete Expense', 'Are you sure you want to delete this expense?', () => {
+                        this.deleteExpense(this.app.data.editingItem.id);
+                    });
+                });
+                
+                // Settings
+                document.getElementById('saveSettings').addEventListener('click', () => {
+                    this.saveSettings();
+                });
+                
+                // Export/Import
+                document.getElementById('exportData').addEventListener('click', () => {
+                    this.exportData();
+                });
+                
+                document.getElementById('importData').addEventListener('click', () => {
+                    this.importData();
+                });
+                
+                // Clear All Data
+                document.getElementById('clearAllData').addEventListener('click', () => {
+                    this.showConfirmModal('Clear All Data', 'This will delete all your tasks, expenses, habits, and journal entries. This action cannot be undone.', () => {
+                        this.clearAllData();
+                    });
+                });
+                
+                // Confirmation Modal
+                document.getElementById('confirmCancel').addEventListener('click', () => {
+                    this.hideModal('confirmModal');
+                });
+                
+                document.getElementById('confirmAction').addEventListener('click', () => {
+                    const action = this.confirmAction;
+                    this.hideModal('confirmModal');
+                    if (action) {
+                        action();
+                    }
+                });
+                
+                // PWA Install
+                document.getElementById('installButton').addEventListener('click', () => {
+                    this.installPWA();
+                });
+                
+                document.getElementById('dismissInstall').addEventListener('click', () => {
+                    this.hideInstallPrompt();
+                });
+                
+                // Swipe gestures for mobile
+                this.setupSwipeGestures();
+            }
+            
+            setupCategoryFilters() {
+                const categories = [
+                    { value: 'food', label: 'Food' },
+                    { value: 'transportation', label: 'Transport' },
+                    { value: 'shopping', label: 'Shopping' },
+                    { value: 'entertainment', label: 'Entertainment' },
+                    { value: 'bills', label: 'Bills' },
+                    { value: 'health', label: 'Health' },
+                    { value: 'education', label: 'Education' },
+                    { value: 'other', label: 'Other' }
+                ];
+                
+                const container = document.getElementById('categoryFilters');
+                categories.forEach(category => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'badge';
+                    btn.textContent = category.label;
+                    btn.dataset.category = category.value;
+                    
+                    btn.addEventListener('click', () => {
+                        // Toggle category filter
+                        if (this.app.data.expenseFilter.category === category.value) {
+                            this.app.data.expenseFilter.category = null;
+                            btn.classList.remove('badge-primary');
+                        } else {
+                            this.app.data.expenseFilter.category = category.value;
+                            document.querySelectorAll('#categoryFilters .badge').forEach(b => {
+                                b.classList.remove('badge-primary');
+                            });
+                            btn.classList.add('badge-primary');
+                        }
+                        this.renderExpenses();
+                    });
+                    
+                    container.appendChild(btn);
+                });
+            }
+            
+            setupSwipeGestures() {
+                let startX, startY;
+                const threshold = 50;
+                
+                document.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                });
+                
+                document.addEventListener('touchmove', (e) => {
+                    if (!startX || !startY) return;
+                    
+                    const xDiff = startX - e.touches[0].clientX;
+                    const yDiff = startY - e.touches[0].clientY;
+                    
+                    // Only detect horizontal swipes
+                    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+                        e.preventDefault();
+                    }
+                });
+                
+                document.addEventListener('touchend', (e) => {
+                    if (!startX || !startY) return;
+                    
+                    const endX = e.changedTouches[0].clientX;
+                    const endY = e.changedTouches[0].clientY;
+                    
+                    const xDiff = startX - endX;
+                    const yDiff = startY - endY;
+                    
+                    // Check if it's a horizontal swipe
+                    if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > threshold) {
+                        const views = ['dashboard', 'tasks', 'expenses', 'habits', 'journal'];
+                        const currentIndex = views.indexOf(this.currentView);
+                        
+                        if (xDiff > 0) {
+                            // Swipe left - next view
+                            if (currentIndex < views.length - 1) {
+                                this.switchView(views[currentIndex + 1]);
+                            }
+                        } else {
+                            // Swipe right - previous view
+                            if (currentIndex > 0) {
+                                this.switchView(views[currentIndex - 1]);
+                            }
+                        }
+                    }
+                    
+                    startX = null;
+                    startY = null;
+                });
+            }
+            
+            setupInstallPrompt() {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.app.data.deferredPrompt = e;
+                    this.showInstallPrompt();
+                });
+                
+                window.addEventListener('appinstalled', () => {
+                    this.hideInstallPrompt();
+                    this.showToast('App installed successfully!', 'success');
+                });
+            }
+            
+            setupOfflineDetection() {
+                window.addEventListener('online', () => {
+                    document.getElementById('offlineIndicator').style.display = 'none';
+                });
+                
+                window.addEventListener('offline', () => {
+                    document.getElementById('offlineIndicator').style.display = 'block';
+                });
+                
+                // Initial check
+                if (!navigator.onLine) {
+                    document.getElementById('offlineIndicator').style.display = 'block';
+                }
+            }
+            
+            switchView(viewName) {
+                // Update navigation
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.view === viewName);
+                });
+                
+                // Update views
+                document.querySelectorAll('.view').forEach(view => {
+                    view.classList.remove('active');
+                });
+                document.getElementById(`${viewName}View`).classList.add('active');
+                
+                this.currentView = viewName;
+                this.app.data.currentView = viewName;
+                
+                // Update view-specific content
+                switch(viewName) {
+                    case 'dashboard':
+                        this.updateDashboard();
+                        break;
+                    case 'tasks':
+                        this.renderTasks();
+                        break;
+                    case 'expenses':
+                        this.renderExpenses();
+                        break;
+                    case 'habits':
+                        this.renderHabits();
+                        break;
+                    case 'journal':
+                        this.renderJournalEntries();
+                        break;
+                }
+            }
+            
+            updateDateTime() {
+                const now = new Date();
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                };
+                document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+            }
+            
+            updateGreeting() {
+                const hour = new Date().getHours();
+                let greeting = 'Good ';
+                let icon = 'fas fa-';
+                
+                if (hour < 12) {
+                    greeting += 'Morning';
+                    icon += 'sun';
+                } else if (hour < 17) {
+                    greeting += 'Afternoon';
+                    icon += 'sun';
+                } else {
+                    greeting += 'Evening';
+                    icon += 'moon';
+                }
+                
+                document.getElementById('greeting').innerHTML = 
+                    `<i class="${icon}"></i> ${greeting}!`;
+            }
+            
+            showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} toast-icon"></i>
+                    <div>${message}</div>
+                `;
+                
+                const container = document.getElementById('toastContainer');
+                container.appendChild(toast);
+                
+                // Show with animation
+                setTimeout(() => toast.classList.add('show'), 10);
+                
+                // Remove after delay
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+            
+            showModal(modalId) {
+                document.getElementById(modalId).classList.add('active');
+            }
+            
+            hideModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+            
+            hideAllModals() {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+                this.resetEditing();
+            }
+            
+            showConfirmModal(title, message, action) {
+                document.getElementById('confirmModalTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = message;
+                this.confirmAction = action;
+                this.showModal('confirmModal');
+            }
+            
+            showInstallPrompt() {
+                setTimeout(() => {
+                    document.getElementById('installPrompt').classList.add('show');
+                }, 3000);
+            }
+            
+            hideInstallPrompt() {
+                document.getElementById('installPrompt').classList.remove('show');
+            }
+            
+            installPWA() {
+                if (this.app.data.deferredPrompt) {
+                    this.app.data.deferredPrompt.prompt();
+                    this.app.data.deferredPrompt.userChoice.then(choiceResult => {
+                        if (choiceResult.outcome === 'accepted') {
+                            this.showToast('Preparing installation...', 'success');
+                        }
+                        this.app.data.deferredPrompt = null;
+                    });
+                }
+            }
+            
+            handleFabClick() {
+                switch(this.currentView) {
+                    case 'tasks':
+                        this.showTaskModal();
+                        break;
+                    case 'expenses':
+                        this.showExpenseModal();
+                        break;
+                    case 'journal':
+                        document.getElementById('journalEntry').focus();
+                        break;
+                    default:
+                        this.showTaskModal();
+                }
+            }
+            
+            showTaskModal(task = null) {
+                this.app.data.editingItem = task;
+                this.app.data.editingType = 'task';
+                
+                if (task) {
+                    document.getElementById('taskModalTitle').textContent = 'Edit Task';
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskTitle').value = task.title;
+                    document.getElementById('taskDueDate').value = task.dueDate || '';
+                    document.getElementById('taskCategory').value = task.category || 'personal';
+                    document.getElementById('taskNotes').value = task.notes || '';
+                    
+                    // Set priority
+                    document.querySelectorAll('.priority-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.classList.remove('badge-primary');
+                        if (btn.dataset.priority === task.priority) {
+                            btn.classList.add('active');
+                            btn.classList.add('badge-primary');
+                        }
+                    });
+                    
+                    document.getElementById('deleteTaskBtn').style.display = 'block';
+                } else {
+                    document.getElementById('taskModalTitle').textContent = 'New Task';
+                    document.getElementById('taskForm').reset();
+                    document.getElementById('taskDueDate').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('deleteTaskBtn').style.display = 'none';
+                    
+                    // Reset priority to medium
+                    document.querySelectorAll('.priority-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.classList.remove('badge-primary');
+                        if (btn.dataset.priority === 'medium') {
+                            btn.classList.add('active');
+                            btn.classList.add('badge-primary');
+                        }
+                    });
+                }
+                
+                this.showModal('taskModal');
+            }
+            
+            showExpenseModal(expense = null) {
+                this.app.data.editingItem = expense;
+                this.app.data.editingType = 'expense';
+                
+                if (expense) {
+                    document.getElementById('expenseModalTitle').textContent = 'Edit Expense';
+                    document.getElementById('expenseId').value = expense.id;
+                    document.getElementById('expenseAmount').value = expense.amount;
+                    document.getElementById('expenseDescription').value = expense.description;
+                    document.getElementById('expenseCategory').value = expense.category;
+                    document.getElementById('expenseDate').value = expense.date;
+                    document.getElementById('expensePayment').value = expense.payment || '';
+                    
+                    document.getElementById('deleteExpenseBtn').style.display = 'block';
+                } else {
+                    document.getElementById('expenseModalTitle').textContent = 'New Expense';
+                    document.getElementById('expenseForm').reset();
+                    document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('deleteExpenseBtn').style.display = 'none';
+                }
+                
+                this.showModal('expenseModal');
+            }
+            
+            showSettingsModal() {
+                const settings = this.app.data.settings;
+                
+                document.getElementById('dailyBudget').value = settings.dailyBudget;
+                document.getElementById('waterGoal').value = settings.waterGoal;
+                document.getElementById('enableNotifications').checked = settings.enableNotifications;
+                document.getElementById('defaultCurrency').value = settings.defaultCurrency;
+                document.getElementById('themeSelect').value = settings.theme;
+                
+                this.showModal('settingsModal');
+            }
+            
+            handleTaskSubmit() {
+                const id = document.getElementById('taskId').value || Date.now().toString();
+                const title = document.getElementById('taskTitle').value.trim();
+                const priority = document.querySelector('.priority-btn.active').dataset.priority;
+                const dueDate = document.getElementById('taskDueDate').value || null;
+                const category = document.getElementById('taskCategory').value;
+                const notes = document.getElementById('taskNotes').value.trim();
+                
+                if (!title) {
+                    this.showToast('Please enter a task title', 'error');
+                    return;
+                }
+                
+                const task = {
+                    id,
+                    title,
+                    priority,
+                    dueDate,
+                    category,
+                    notes,
+                    completed: this.app.data.editingItem?.completed || false,
+                    createdAt: this.app.data.editingItem?.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Check if editing or adding
+                if (this.app.data.editingItem) {
+                    // Update existing task
+                    const index = this.app.data.tasks.findIndex(t => t.id === id);
+                    if (index !== -1) {
+                        this.app.data.tasks[index] = task;
+                        this.app.data.logActivity('Task updated', title);
+                    }
+                } else {
+                    // Add new task
+                    this.app.data.tasks.unshift(task);
+                    this.app.data.logActivity('Task added', title);
+                }
+                
+                this.app.data.save();
+                this.showToast(`Task ${this.app.data.editingItem ? 'updated' : 'added'}!`, 'success');
+                this.hideAllModals();
+                this.renderTasks();
+                this.updateDashboard();
+            }
+            
+            handleExpenseSubmit() {
+                const id = document.getElementById('expenseId').value || Date.now().toString();
+                const amount = parseFloat(document.getElementById('expenseAmount').value);
+                const description = document.getElementById('expenseDescription').value.trim();
+                const category = document.getElementById('expenseCategory').value;
+                const date = document.getElementById('expenseDate').value;
+                const payment = document.getElementById('expensePayment').value || null;
+                
+                if (!amount || amount <= 0) {
+                    this.showToast('Please enter a valid amount', 'error');
+                    return;
+                }
+                
+                if (!description) {
+                    this.showToast('Please enter a description', 'error');
+                    return;
+                }
+                
+                if (!date) {
+                    this.showToast('Please select a date', 'error');
+                    return;
+                }
+                
+                const expense = {
+                    id,
+                    amount,
+                    description,
+                    category,
+                    date,
+                    payment,
+                    createdAt: this.app.data.editingItem?.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Check if editing or adding
+                if (this.app.data.editingItem) {
+                    // Update existing expense
+                    const index = this.app.data.expenses.findIndex(e => e.id === id);
+                    if (index !== -1) {
+                        this.app.data.expenses[index] = expense;
+                        this.app.data.logActivity('Expense updated', `${description}: $${amount.toFixed(2)}`);
+                    }
+                } else {
+                    // Add new expense
+                    this.app.data.expenses.unshift(expense);
+                    this.app.data.logActivity('Expense added', `${description}: $${amount.toFixed(2)}`);
+                }
+                
+                this.app.data.save();
+                this.showToast(`Expense ${this.app.data.editingItem ? 'updated' : 'added'}!`, 'success');
+                this.hideAllModals();
+                this.renderExpenses();
+                this.updateDashboard();
+            }
+            
+            handleJournalSubmit() {
+                const content = document.getElementById('journalEntry').value.trim();
+                if (!content) {
+                    this.showToast('Please write something in your journal entry', 'error');
+                    return;
+                }
+                
+                const mood = parseInt(document.querySelector('.mood-btn.active').dataset.mood);
+                const date = new Date().toISOString().split('T')[0];
+                
+                // Check if entry already exists for today
+                const existingIndex = this.app.data.journalEntries.findIndex(e => e.date === date);
+                
+                const entry = {
+                    id: existingIndex !== -1 ? this.app.data.journalEntries[existingIndex].id : Date.now().toString(),
+                    content,
+                    mood,
+                    date,
+                    createdAt: existingIndex !== -1 ? this.app.data.journalEntries[existingIndex].createdAt : new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                if (existingIndex !== -1) {
+                    this.app.data.journalEntries[existingIndex] = entry;
+                    this.app.data.logActivity('Journal entry updated');
+                } else {
+                    this.app.data.journalEntries.unshift(entry);
+                    this.app.data.logActivity('Journal entry added');
+                }
+                
+                this.app.data.save();
+                this.showToast('Journal entry saved!', 'success');
+                document.getElementById('journalEntry').value = '';
+                this.renderJournalEntries();
+                this.updateDashboard();
+            }
+            
+            deleteTask(taskId) {
+                this.app.data.tasks = this.app.data.tasks.filter(t => t.id !== taskId);
+                this.app.data.save();
+                this.app.data.logActivity('Task deleted');
+                this.showToast('Task deleted!', 'success');
+                this.renderTasks();
+                this.updateDashboard();
+                this.hideAllModals();
+            }
+            
+            deleteExpense(expenseId) {
+                this.app.data.expenses = this.app.data.expenses.filter(e => e.id !== expenseId);
+                this.app.data.save();
+                this.app.data.logActivity('Expense deleted');
+                this.showToast('Expense deleted!', 'success');
+                this.renderExpenses();
+                this.updateDashboard();
+                this.hideAllModals();
+            }
+            
+            resetEditing() {
+                this.app.data.editingItem = null;
+                this.app.data.editingType = null;
+                this.confirmAction = null;
+            }
+            
+            updateDashboard() {
+                const today = new Date().toISOString().split('T')[0];
+                
+                // Tasks
+                const todayTasks = this.app.data.tasks.filter(task => 
+                    !task.dueDate || task.dueDate === today
+                );
+                const completedTasks = todayTasks.filter(task => task.completed).length;
+                
+                document.getElementById('todayTasks').textContent = todayTasks.length;
+                document.getElementById('taskProgress').style.width = 
+                    todayTasks.length > 0 ? `${(completedTasks / todayTasks.length) * 100}%` : '0%';
+                
+                // Update task badge
+                const pendingTasks = this.app.data.tasks.filter(t => !t.completed).length;
+                const taskBadge = document.getElementById('taskBadge');
+                if (pendingTasks > 0) {
+                    taskBadge.textContent = pendingTasks > 99 ? '99+' : pendingTasks;
+                    taskBadge.style.display = 'flex';
+                } else {
+                    taskBadge.style.display = 'none';
+                }
+                
+                // Expenses
+                const todayExpenses = this.app.data.expenses.filter(expense => expense.date === today);
+                const totalTodayExpenses = todayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                document.getElementById('todayExpenses').textContent = `$${totalTodayExpenses.toFixed(2)}`;
+                
+                const dailyBudget = this.app.data.settings.dailyBudget || 50;
+                const budgetStatus = document.getElementById('budgetStatus');
+                if (totalTodayExpenses > dailyBudget) {
+                    budgetStatus.textContent = 'Over Budget';
+                    budgetStatus.style.color = 'var(--error)';
+                } else {
+                    budgetStatus.textContent = 'Under Budget';
+                    budgetStatus.style.color = 'var(--success)';
+                }
+                
+                // Streak
+                const streak = this.calculateStreak();
+                document.getElementById('currentStreak').textContent = streak;
+                
+                // Water Intake
+                const waterGoal = this.app.data.settings.waterGoal || 8;
+                const waterIntake = this.app.data.waterIntake.glasses || 0;
+                document.getElementById('waterIntake').textContent = `${waterIntake}/${waterGoal}`;
+                document.getElementById('waterProgress').style.width = 
+                    `${(waterIntake / waterGoal) * 100}%`;
+                
+                // Recent Activity
+                this.renderRecentActivity();
+            }
+            
+            calculateStreak() {
+                if (this.app.data.journalEntries.length === 0) return 0;
+                
+                const entriesByDate = {};
+                this.app.data.journalEntries.forEach(entry => {
+                    entriesByDate[entry.date] = true;
+                });
+                
+                let streak = 0;
+                let currentDate = new Date();
+                
+                while (true) {
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    if (entriesByDate[dateStr]) {
+                        streak++;
+                        currentDate.setDate(currentDate.getDate() - 1);
+                    } else {
+                        break;
+                    }
+                }
+                
+                return streak;
+            }
+            
+            renderRecentActivity() {
+                const container = document.getElementById('recentActivity');
+                const emptyState = document.getElementById('noActivity');
+                
+                if (this.app.data.activityLog.length === 0) {
+                    emptyState.style.display = 'block';
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+                
+                const recentActivities = this.app.data.activityLog.slice(0, 10);
+                
+                recentActivities.forEach(activity => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item';
+                    
+                    const timeAgo = this.getTimeAgo(activity.timestamp);
+                    const icon = this.getActivityIcon(activity.type);
+                    
+                    li.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                            <div style="color: var(--${activity.type});">${icon}</div>
+                            <div class="item-content">
+                                <div class="item-title">${activity.action}</div>
+                                <div class="item-meta">${timeAgo} • ${activity.details || ''}</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(li);
+                });
+            }
+            
+            getTimeAgo(timestamp) {
+                const now = new Date();
+                const past = new Date(timestamp);
+                const diffMs = now - past;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 60) return `${diffMins}m ago`;
+                if (diffHours < 24) return `${diffHours}h ago`;
+                if (diffDays < 7) return `${diffDays}d ago`;
+                return past.toLocaleDateString();
+            }
+            
+            getActivityIcon(type) {
+                switch(type) {
+                    case 'success': return '✓';
+                    case 'error': return '✗';
+                    case 'info': return 'ℹ';
+                    default: return '•';
+                }
+            }
+            
+            renderTasks() {
+                const container = document.getElementById('tasksList');
+                const emptyState = document.getElementById('noTasks');
+                
+                let tasks = this.app.data.tasks;
+                
+                switch(this.app.data.taskFilter) {
+                    case 'today':
+                        const today = new Date().toISOString().split('T')[0];
+                        tasks = tasks.filter(task => !task.dueDate || task.dueDate === today);
+                        break;
+                    case 'pending':
+                        tasks = tasks.filter(task => !task.completed);
+                        break;
+                    case 'completed':
+                        tasks = tasks.filter(task => task.completed);
+                        break;
+                    case 'overdue':
+                        const now = new Date().toISOString().split('T')[0];
+                        tasks = tasks.filter(task => task.dueDate && task.dueDate < now && !task.completed);
+                        break;
+                }
+                
+                if (tasks.length === 0) {
+                    emptyState.style.display = 'block';
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+                
+                // Sort by due date (ascending), then by creation date (descending)
+                tasks.sort((a, b) => {
+                    if (a.dueDate && b.dueDate) {
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                    }
+                    if (a.dueDate) return -1;
+                    if (b.dueDate) return 1;
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                
+                tasks.forEach(task => {
+                    const li = this.createTaskElement(task);
+                    container.appendChild(li);
+                });
+            }
+            
+            createTaskElement(task) {
+                const li = document.createElement('li');
+                li.className = 'list-item swipe-item';
+                li.dataset.id = task.id;
+                
+                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
+                const priorityColors = {
+                    high: 'error',
+                    medium: 'warning',
+                    low: 'success'
+                };
+                
+                li.innerHTML = `
+                    <div class="item-content">
+                        <div class="item-title" style="${task.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
+                            ${task.title}
+                            ${isOverdue ? '<span style="color: var(--error); font-size: 0.75rem;"> (Overdue)</span>' : ''}
+                        </div>
+                        <div class="item-meta">
+                            <span class="badge badge-${priorityColors[task.priority]}">
+                                ${task.priority}
+                            </span>
+                            ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                            ${task.category ? `• ${task.category}` : ''}
+                        </div>
+                    </div>
+                    <div class="swipe-actions">
+                        <button class="swipe-action edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="swipe-action delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Add swipe functionality
+                this.setupSwipeActions(li);
+                
+                // Add click handlers for swipe actions
+                li.querySelector('.swipe-action.edit').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showTaskModal(task);
+                });
+                
+                li.querySelector('.swipe-action.delete').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showConfirmModal('Delete Task', 'Are you sure you want to delete this task?', () => {
+                        this.deleteTask(task.id);
+                    });
+                });
+                
+                // Toggle completion on click
+                li.addEventListener('click', (e) => {
+                    if (!e.target.closest('.swipe-actions')) {
+                        task.completed = !task.completed;
+                        this.app.data.save();
+                        this.app.data.logActivity(`Task ${task.completed ? 'completed' : 'reopened'}`, task.title);
+                        this.renderTasks();
+                        this.updateDashboard();
+                        this.showToast(`Task ${task.completed ? 'completed' : 'reopened'}!`, 'success');
+                    }
+                });
+                
+                return li;
+            }
+            
+            setupSwipeActions(element) {
+                let startX, currentX, isSwiped = false;
+                
+                element.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    currentX = startX;
+                });
+                
+                element.addEventListener('touchmove', (e) => {
+                    if (!startX) return;
+                    
+                    currentX = e.touches[0].clientX;
+                    const diff = startX - currentX;
+                    
+                    if (diff > 0) { // Swiping left
+                        const translate = Math.min(diff, 120);
+                        element.style.transform = `translateX(-${translate}px)`;
+                        isSwiped = translate > 30;
+                    }
+                });
+                
+                element.addEventListener('touchend', () => {
+                    if (!startX) return;
+                    
+                    if (isSwiped) {
+                        element.style.transform = 'translateX(-120px)';
+                    } else {
+                        element.style.transform = 'translateX(0)';
+                    }
+                    
+                    startX = null;
+                });
+            }
+            
+            renderExpenses() {
+                const container = document.getElementById('expensesList');
+                const emptyState = document.getElementById('noExpenses');
+                const periodTotal = document.getElementById('periodTotal');
+                
+                const filteredExpenses = this.app.data.getFilteredExpenses();
+                const summary = this.app.data.getExpenseSummary();
+                
+                periodTotal.textContent = `$${summary.total.toFixed(2)}`;
+                
+                if (filteredExpenses.length === 0) {
+                    emptyState.style.display = 'block';
+                    container.innerHTML = '';
+                    this.updateExpenseSummary(summary);
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+                
+                // Group by date
+                const groupedExpenses = {};
+                filteredExpenses.forEach(expense => {
+                    if (!groupedExpenses[expense.date]) {
+                        groupedExpenses[expense.date] = [];
+                    }
+                    groupedExpenses[expense.date].push(expense);
+                });
+                
+                // Sort dates descending
+                const sortedDates = Object.keys(groupedExpenses).sort((a, b) => b.localeCompare(a));
+                
+                sortedDates.forEach(date => {
+                    // Date header
+                    const dateHeader = document.createElement('div');
+                    dateHeader.style.cssText = `
+                        margin-bottom: var(--spacing-sm);
+                        font-weight: 500;
+                        color: var(--text-secondary);
+                        font-size: 0.875rem;
+                        padding: var(--spacing-sm) var(--spacing-md);
+                        background: var(--bg-tertiary);
+                        border-radius: var(--radius-md);
+                    `;
+                    dateHeader.textContent = new Date(date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    container.appendChild(dateHeader);
+                    
+                    // Expenses for this date
+                    groupedExpenses[date].forEach(expense => {
+                        const li = this.createExpenseElement(expense);
+                        container.appendChild(li);
+                    });
+                });
+                
+                this.updateExpenseSummary(summary);
+            }
+            
+            createExpenseElement(expense) {
+                const li = document.createElement('li');
+                li.className = 'list-item swipe-item';
+                li.dataset.id = expense.id;
+                
+                const categoryLabels = {
+                    food: 'Food',
+                    transportation: 'Transport',
+                    shopping: 'Shopping',
+                    entertainment: 'Entertainment',
+                    bills: 'Bills',
+                    health: 'Health',
+                    education: 'Education',
+                    other: 'Other'
+                };
+                
+                li.innerHTML = `
+                    <div class="item-content">
+                        <div class="item-title">${expense.description}</div>
+                        <div class="item-meta">
+                            <span class="badge">${categoryLabels[expense.category] || expense.category}</span>
+                            ${expense.payment ? `<span style="font-size: 0.75rem;">• ${expense.payment}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="font-weight: 600; color: var(--error);">
+                        $${expense.amount.toFixed(2)}
+                    </div>
+                    <div class="swipe-actions">
+                        <button class="swipe-action edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="swipe-action delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Add swipe functionality
+                this.setupSwipeActions(li);
+                
+                // Add click handlers for swipe actions
+                li.querySelector('.swipe-action.edit').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showExpenseModal(expense);
+                });
+                
+                li.querySelector('.swipe-action.delete').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showConfirmModal('Delete Expense', 'Are you sure you want to delete this expense?', () => {
+                        this.deleteExpense(expense.id);
+                    });
+                });
+                
+                return li;
+            }
+            
+            updateExpenseSummary(summary) {
+                const container = document.getElementById('expenseSummary');
+                
+                if (summary.count === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: var(--text-secondary);">No expenses in selected period</div>';
+                    return;
+                }
+                
+                let html = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-md);">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Total</div>
+                            <div style="font-size: 1.5rem; font-weight: 600; color: var(--error);">$${summary.total.toFixed(2)}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Count</div>
+                            <div style="font-size: 1.5rem; font-weight: 600;">${summary.count}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Average</div>
+                            <div style="font-size: 1.5rem; font-weight: 600;">$${summary.average.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Add category breakdown
+                if (Object.keys(summary.byCategory).length > 0) {
+                    html += '<div style="margin-top: var(--spacing-md);"><div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: var(--spacing-sm);">By Category:</div>';
+                    
+                    Object.entries(summary.byCategory).forEach(([category, amount]) => {
+                        const percentage = ((amount / summary.total) * 100).toFixed(1);
+                        html += `
+                            <div style="margin-bottom: var(--spacing-sm);">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: var(--spacing-xs);">
+                                    <span>${category}</span>
+                                    <span>$${amount.toFixed(2)} (${percentage}%)</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${percentage}%;"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                }
+                
+                container.innerHTML = html;
+            }
+            
+            renderHabits() {
+                const container = document.getElementById('habitsList');
+                const emptyState = document.getElementById('noHabits');
+                const streakCount = document.getElementById('streakCount');
+                
+                if (this.app.data.habits.length === 0) {
+                    emptyState.style.display = 'block';
+                    container.innerHTML = '';
+                    streakCount.textContent = '0 day streak';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+                
+                // Calculate longest streak
+                let longestStreak = 0;
+                this.app.data.habits.forEach(habit => {
+                    if (habit.currentStreak > longestStreak) {
+                        longestStreak = habit.currentStreak;
+                    }
+                });
+                
+                streakCount.textContent = `${longestStreak} day streak`;
+                
+                // For now, just show a message since we're focusing on other features
+                const message = document.createElement('div');
+                message.style.cssText = `
+                    text-align: center;
+                    padding: var(--spacing-lg);
+                    color: var(--text-secondary);
+                `;
+                message.innerHTML = `
+                    <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: var(--spacing-sm); opacity: 0.5;"></i>
+                    <p>Habit tracking feature coming soon!</p>
+                `;
+                container.appendChild(message);
+            }
+            
+            renderJournalEntries() {
+                const container = document.getElementById('journalList');
+                const emptyState = document.getElementById('noJournal');
+                
+                let entries = this.app.data.journalEntries;
+                
+                // Filter by month if selected
+                if (this.app.data.journalFilter) {
+                    entries = entries.filter(entry => entry.date.startsWith(this.app.data.journalFilter));
+                }
+                
+                if (entries.length === 0) {
+                    emptyState.style.display = 'block';
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+                
+                const moodEmojis = ['😢', '😞', '😐', '😊', '😄'];
+                
+                entries.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = 'list-item';
+                    li.dataset.id = entry.id;
+                    
+                    const moodEmoji = moodEmojis[entry.mood - 1] || '😐';
+                    
+                    li.innerHTML = `
+                        <div class="item-content">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-xs);">
+                                <span style="font-size: 1.25rem;">${moodEmoji}</span>
+                                <span style="font-weight: 500;">${new Date(entry.date).toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                })}</span>
+                            </div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.4; max-height: 4.2em; overflow: hidden; text-overflow: ellipsis;">
+                                ${entry.content}
+                            </div>
+                        </div>
+                        <button class="icon-btn view-journal" style="background: var(--bg-secondary);">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    `;
+                    
+                    li.querySelector('.view-journal').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.viewJournalEntry(entry);
+                    });
+                    
+                    container.appendChild(li);
+                });
+            }
+            
+            viewJournalEntry(entry) {
+                const moodEmojis = ['😢', '😞', '😐', '😊', '😄'];
+                const moodEmoji = moodEmojis[entry.mood - 1] || '😐';
+                
+                // Create a modal for viewing journal entry
+                const modal = document.createElement('div');
+                modal.className = 'modal active';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">${new Date(entry.date).toLocaleDateString()}</h3>
+                            <button class="modal-close" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div style="margin-bottom: var(--spacing-md);">
+                            <span style="font-size: 1.5rem;">${moodEmoji}</span>
+                            <span style="margin-left: var(--spacing-sm); font-size: 0.875rem; color: var(--text-secondary);">
+                                Mood: ${entry.mood}/5
+                            </span>
+                        </div>
+                        <div style="white-space: pre-line; line-height: 1.6; margin-bottom: var(--spacing-lg);">${entry.content}</div>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button class="btn btn-secondary" id="editJournalBtn" style="flex: 1;">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn" style="background: var(--bg-tertiary); color: var(--text-secondary); flex: 1;" id="deleteJournalBtn">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Add event listeners
+                modal.querySelector('#editJournalBtn').addEventListener('click', () => {
+                    modal.remove();
+                    document.getElementById('journalEntry').value = entry.content;
+                    document.querySelectorAll('.mood-btn').forEach(btn => {
+                        btn.classList.toggle('active', parseInt(btn.dataset.mood) === entry.mood);
+                    });
+                    this.switchView('journal');
+                });
+                
+                modal.querySelector('#deleteJournalBtn').addEventListener('click', () => {
+                    modal.remove();
+                    this.showConfirmModal('Delete Journal Entry', 'Are you sure you want to delete this journal entry?', () => {
+                        this.deleteJournalEntry(entry.id);
+                    });
+                });
+                
+                // Close on backdrop click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+            
+            deleteJournalEntry(entryId) {
+                this.app.data.journalEntries = this.app.data.journalEntries.filter(e => e.id !== entryId);
+                this.app.data.save();
+                this.app.data.logActivity('Journal entry deleted');
+                this.showToast('Journal entry deleted!', 'success');
+                this.renderJournalEntries();
+                this.updateDashboard();
+            }
+            
+            saveSettings() {
+                const settings = {
+                    dailyBudget: parseFloat(document.getElementById('dailyBudget').value) || 50,
+                    waterGoal: parseInt(document.getElementById('waterGoal').value) || 8,
+                    enableNotifications: document.getElementById('enableNotifications').checked,
+                    defaultCurrency: document.getElementById('defaultCurrency').value,
+                    theme: document.getElementById('themeSelect').value
+                };
+                
+                this.app.data.settings = settings;
+                this.app.data.save();
+                
+                // Apply theme
+                this.applyTheme(settings.theme);
+                
+                this.showToast('Settings saved!', 'success');
+                this.hideAllModals();
+                this.updateDashboard();
+            }
+            
+            applyTheme(theme) {
+                if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    // Apply dark mode
+                    document.documentElement.style.setProperty('--bg-primary', '#111827');
+                    document.documentElement.style.setProperty('--bg-secondary', '#1f2937');
+                    document.documentElement.style.setProperty('--bg-tertiary', '#374151');
+                    document.documentElement.style.setProperty('--border', '#4b5563');
+                    document.documentElement.style.setProperty('--text-primary', '#f9fafb');
+                    document.documentElement.style.setProperty('--text-secondary', '#d1d5db');
+                    document.documentElement.style.setProperty('--text-tertiary', '#9ca3af');
+                } else {
+                    // Apply light mode
+                    document.documentElement.style.setProperty('--bg-primary', '#ffffff');
+                    document.documentElement.style.setProperty('--bg-secondary', '#f9fafb');
+                    document.documentElement.style.setProperty('--bg-tertiary', '#f3f4f6');
+                    document.documentElement.style.setProperty('--border', '#e5e7eb');
+                    document.documentElement.style.setProperty('--text-primary', '#111827');
+                    document.documentElement.style.setProperty('--text-secondary', '#6b7280');
+                    document.documentElement.style.setProperty('--text-tertiary', '#9ca3af');
+                }
+            }
+            
+            exportData() {
+                const data = {
+                    tasks: this.app.data.tasks,
+                    expenses: this.app.data.expenses,
+                    habits: this.app.data.habits,
+                    journalEntries: this.app.data.journalEntries,
+                    settings: this.app.data.settings,
+                    activityLog: this.app.data.activityLog,
+                    exportedAt: new Date().toISOString(),
+                    version: '2.0'
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `liflow-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showToast('Data exported successfully!', 'success');
+            }
+            
+            importData() {
+                this.showToast('Import feature coming soon!', 'info');
+            }
+            
+            clearAllData() {
+                this.app.data.clearAllData();
+                this.showToast('All data cleared!', 'success');
+                this.updateDashboard();
+                this.renderTasks();
+                this.renderExpenses();
+                this.renderHabits();
+                this.renderJournalEntries();
+            }
+            
+            syncData() {
+                this.showToast('Syncing data...', 'info');
+                
+                // Simulate sync delay
+                setTimeout(() => {
+                    this.showToast('Data synced successfully!', 'success');
+                    this.app.data.logActivity('Data synced', '', 'success');
+                }, 1000);
+            }
+        }
+
+        // ==============================================
+        // MAIN APPLICATION
+        // ==============================================
+        class DailyTrackApp {
+            constructor() {
+                this.data = new AppData();
+                this.ui = new UIManager(this);
+                
+                this.init();
+            }
+            
+            init() {
+                // Setup service worker for PWA
+                this.setupServiceWorker();
+                
+                // Initialize all views
+                this.ui.updateDashboard();
+                this.ui.renderTasks();
+                this.ui.renderExpenses();
+                this.ui.renderHabits();
+                this.ui.renderJournalEntries();
+            }
+            
+            setupServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    const swCode = `
+                        const CACHE_NAME = 'liflow-v2';
+                        const urlsToCache = [
+                            '/',
+                            '/index.html',
+                            '/manifest.json'
+                        ];
+
+                        self.addEventListener('install', event => {
+                            event.waitUntil(
+                                caches.open(CACHE_NAME)
+                                    .then(cache => {
+                                        return cache.addAll(urlsToCache);
+                                    })
+                            );
+                        });
+
+                        self.addEventListener('fetch', event => {
+                            event.respondWith(
+                                caches.match(event.request)
+                                    .then(response => {
+                                        if (response) {
+                                            return response;
+                                        }
+                                        return fetch(event.request);
+                                    })
+                            );
+                        });
+
+                        self.addEventListener('activate', event => {
+                            event.waitUntil(
+                                caches.keys().then(cacheNames => {
+                                    return Promise.all(
+                                        cacheNames.map(cacheName => {
+                                            if (cacheName !== CACHE_NAME) {
+                                                return caches.delete(cacheName);
+                                            }
+                                        })
+                                    );
+                                })
+                            );
+                        });
+                    `;
+                    
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swURL = URL.createObjectURL(blob);
+                    
+                    navigator.serviceWorker.register(swURL).then(() => {
+                        console.log('Service Worker registered successfully');
+                    }).catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+                }
+            }
+        }
+
+        // ==============================================
+        // INITIALIZE APPLICATION
+        // ==============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            window.app = new DailyTrackApp();
+        });
+    </script>
+</body>
+</html>
